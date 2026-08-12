@@ -411,7 +411,7 @@ padding:10px;
                 );
             if (saved) {
                 library =
-                JSON.parse(saved);
+                    JSON.parse(saved);
             }
         } function saveLibrary() {
             localStorage.setItem(
@@ -648,187 +648,372 @@ padding:10px;
            SPEECH ENGINE
         ===================================================== */
 
-        function speakCurrentSentence() {
-            if (!isPlaying || isPaused)
-                return;
-            if (currentSentenceIndex >= sentences.length) {
-                nextChapter();
-                return;
-            }
-            let text = sentences[currentSentenceIndex];
 
-            currentUtterance =
-                new SpeechSynthesisUtterance(text);
-            if (selectedVoice) {
-                currentUtterance.voice =
-                selectedVoice;
-            }
-            currentUtterance.rate =
-                speed; currentUtterance.onstart = function () {
-                    highlightCurrent();
-                };
-            currentUtterance.onend = function () {
-                if (!isPlaying || isPaused)
-                    return;
-                currentSentenceIndex++;
-                updateProgress();
-                renderSentences();
-                setTimeout(() => {
-                    if (isPlaying && !isPaused) {
-                        speakCurrentSentence();
-                    }
-                }, 100);
-            };
-            speechSynthesis.speak(currentUtterance);
-        }
 
         /* =====================================================
-        CHAPTER NAVIGATION
-        ===================================================== */
-
-        document.getElementById(
-            "nextChapterButton"
-        )
-            .onclick = function () {
-                stopSpeech();
-                if (currentChapterIndex < chapters.length - 1) {
-                    loadChapter(currentChapterIndex + 1);
-                }
-            };
-        document.getElementById("prevChapterButton")
-            .onclick = function () {
-                stopSpeech(); if (currentChapterIndex > 0) {
-                    loadChapter(currentChapterIndex - 1);
-                }
-            };
-
-        /* =====================================================
-        WORD JUMP
-        ===================================================== */
-
-        document.getElementById(
-            "jumpButton"
-        )
-            .onclick = function () {
-                let amount =
-                    parseInt(document.getElementById("jumpInput").value);
-                if (!amount)
-                    return;
-                let wordsMoved = 0;
-                let direction = amount > 0 ? 1 : -1; amount = Math.abs(amount);
-                while (wordsMoved < amount) {
-                    currentSentenceIndex += direction;
-                    if (
-                        currentSentenceIndex < 0
-                    ) {
-                        currentSentenceIndex = 0;
-                        break;
-                    } if (currentSentenceIndex >= sentences.length) {
-                        currentSentenceIndex =
-                            sentences.length - 1; break;
-                    }
-                    wordsMoved += sentences[currentSentenceIndex]
-                        .split(/\s+/)
-                        .length;
-                }
-                renderSentences();
-                updateProgress();
-            };
-
-        /* =====================================================
-           PLAY / PAUSE / RESUME
+           SPEECH ENGINE - STABLE VERSION
         ===================================================== */
 
         let isPaused = false;
 
-        document.getElementById("playButton").onclick = function () {
-            /* =========================
-               PAUSED → RESUME
-            ========================= */
-            if (isPaused) {
-                speechSynthesis.resume();
-                isPaused = false;
-                isPlaying = true;
-                this.textContent = "⏸";
-                updateProgress();
+        /* =========================
+           START CURRENT SENTENCE
+        ========================= */
+
+        function speakCurrentSentence() {
+
+            if (!isPlaying)
+                return;
+
+            if (currentSentenceIndex >= sentences.length) {
+
+                goToNextChapter();
+
                 return;
             }
+
+            const text = sentences[currentSentenceIndex];
+
+            currentUtterance =
+                new SpeechSynthesisUtterance(text);
+
+            if (selectedVoice) {
+                currentUtterance.voice = selectedVoice;
+            }
+
+            currentUtterance.rate = speed;
+
+
             /* =========================
-               PLAY / START
+               SPEECH START
             ========================= */
-            if (!isPlaying) {
-                isPlaying = true;
+
+            currentUtterance.onstart = function () {
+
                 isPaused = false;
-                this.textContent = "⏸";
-                speakCurrentSentence();
-                updateProgress();
-                return;
-            }
-            /* =========================
-               PLAYING → PAUSE
-            ========================= */
-            if (isPlaying) {
-                speechSynthesis.pause();
-                isPaused = true;
-                isPlaying = false;
-                this.textContent = "▶";
-                saveProgress();
-                updateProgress();
-            }
-        };
 
-        /* =====================================================
-           RESTART CHAPTER
-        ===================================================== */
+                highlightCurrent();
 
-        document.getElementById(
-            "restartButton"
-        )
-            .onclick = function () {
-                stopSpeech();
-                currentSentenceIndex = 0;
-                renderSentences();
-                updateProgress();
             };
 
+
+            /* =========================
+               SPEECH END
+            ========================= */
+
+            currentUtterance.onend = function () {
+
+                currentUtterance = null;
+
+                if (!isPlaying || isPaused)
+                    return;
+
+                currentSentenceIndex++;
+
+                updateProgress();
+                renderSentences();
+
+
+                setTimeout(function () {
+
+                    if (isPlaying && !isPaused) {
+                        speakCurrentSentence();
+                    }
+
+                }, 50);
+
+            };
+
+
+            /* =========================
+               SPEECH ERROR
+            ========================= */
+
+            currentUtterance.onerror = function (event) {
+
+                console.log(
+                    "Speech error:",
+                    event.error
+                );
+
+                currentUtterance = null;
+
+                if (event.error === "canceled") {
+                    return;
+                }
+
+                if (isPlaying && !isPaused) {
+
+                    setTimeout(function () {
+
+                        if (isPlaying && !isPaused) {
+                            speakCurrentSentence();
+                        }
+
+                    }, 200);
+
+                }
+
+            };
+
+
+            speechSynthesis.speak(currentUtterance);
+        }
+
+
+        /* =====================================================
+           PLAY / PAUSE BUTTON
+        ===================================================== */
+
+        document.getElementById("playButton").onclick =
+            function () {
+
+                /* =========================
+                   PLAY
+                ========================= */
+
+                if (!isPlaying) {
+
+                    isPlaying = true;
+                    isPaused = false;
+                    if ("mediaSession" in navigator) {
+                        navigator.mediaSession.playbackState = "playing";
+                    }
+                    this.textContent = "⏸";
+
+                    /*
+                     * Clear any stale Chrome speech state.
+                     */
+
+                    speechSynthesis.cancel();
+
+                    currentUtterance = null;
+
+                    /*
+                     * Start a fresh utterance.
+                     */
+
+                    setTimeout(function () {
+
+                        if (isPlaying) {
+                            speakCurrentSentence();
+                        }
+
+                    }, 50);
+
+                    updateProgress();
+
+                    return;
+                }
+
+
+                /* =========================
+                   PAUSE
+                ========================= */
+
+                if (isPlaying) {
+
+                    isPlaying = false;
+                    isPaused = true;
+
+                    if ("mediaSession" in navigator) {
+                        navigator.mediaSession.playbackState = "paused";
+                    }
+
+                    speechSynthesis.cancel();
+
+                    currentUtterance = null;
+
+                    this.textContent = "▶";
+
+                    saveProgress();
+
+                    updateProgress();
+
+                }
+
+            };
+
+
+        /* =====================================================
+           STOP SPEECH COMPLETELY
+        ===================================================== */
+
         function stopSpeech() {
+
             speechSynthesis.cancel();
+
             isPlaying = false;
             isPaused = false;
+
             currentUtterance = null;
+
+            if ("mediaSession" in navigator) {
+                navigator.mediaSession.playbackState = "none";
+            }
+
             document.getElementById("playButton").textContent = "▶";
         }
+
 
         /* =====================================================
            NEXT CHAPTER
         ===================================================== */
 
-        function nextChapter() {
-            if (
-                currentChapterIndex
-                <
-                chapters.length - 1
-            ) {
-                loadChapter(
-                    currentChapterIndex + 1
-                ); if (isPlaying) speakCurrentSentence();
-            } else {
-                stopSpeech();
+        /* =====================================================
+        CHAPTER NAVIGATION
+        ===================================================== */
+        document.getElementById("nextChapterButton").onclick = function () {
+            const wasPlaying = isPlaying;
+            stopSpeech();
+            if (currentChapterIndex < chapters.length - 1) {
+                loadChapter(currentChapterIndex + 1);
+                if (wasPlaying) {
+                    isPlaying = true;
+                    isPaused = false;
+                    document.getElementById("playButton")
+                        .textContent = "⏸";
+                    setTimeout(function () {
+                        if (isPlaying) {
+                            speakCurrentSentence();
+                        }
+                    }, 150);
+                }
             }
+        };
+        document.getElementById("prevChapterButton").onclick = function () {
+            const wasPlaying = isPlaying;
+            stopSpeech();
+            if (currentChapterIndex > 0) {
+                loadChapter(currentChapterIndex - 1);
+                if (wasPlaying) {
+                    isPlaying = true;
+                    isPaused = false;
+                    document.getElementById("playButton")
+                        .textContent = "⏸";
+                    setTimeout(function () {
+                        if (isPlaying) {
+                            speakCurrentSentence();
+                        }
+                    }, 150);
+                }
+            }
+        };
+
+        /* =====================================================
+        WORD JUMP
+        ===================================================== */
+
+        document.getElementById("jumpButton").onclick = function () {
+            let amount =
+                parseInt(document.getElementById("jumpInput").value);
+            if (!amount)
+                return;
+            let wordsMoved = 0;
+            let direction = amount > 0 ? 1 : -1; amount = Math.abs(amount);
+            while (wordsMoved < amount) {
+                currentSentenceIndex += direction;
+                if (
+                    currentSentenceIndex < 0
+                ) {
+                    currentSentenceIndex = 0;
+                    break;
+                } if (currentSentenceIndex >= sentences.length) {
+                    currentSentenceIndex =
+                        sentences.length - 1; break;
+                }
+                wordsMoved += sentences[currentSentenceIndex]
+                    .split(/\s+/)
+                    .length;
+            }
+            renderSentences();
+            updateProgress();
+        };
+
+        function goToNextChapter() {
+
+            /*
+             * Make sure the old utterance is completely gone.
+             */
+
+            speechSynthesis.cancel();
+
+            currentUtterance = null;
+
+
+            if (currentChapterIndex < chapters.length - 1) {
+
+                currentChapterIndex++;
+
+                currentSentenceIndex = 0;
+
+                loadChapter(currentChapterIndex);
+
+
+                if (isPlaying) {
+
+                    isPaused = false;
+
+                    setTimeout(function () {
+
+                        if (isPlaying) {
+                            speakCurrentSentence();
+                        }
+
+                    }, 150);
+
+                }
+
+            }
+            else {
+
+                stopSpeech();
+
+            }
+
+        }
+
+
+        /* Keep compatibility with your existing code */
+
+        function nextChapter() {
+
+            goToNextChapter();
+
         }
 
         /* =====================================================
-           HIGHLIGHT
+           HIGHLIGHT CURRENT SENTENCE
         ===================================================== */
 
         function highlightCurrent() {
-            renderSentences(); let active =
-                document.querySelector(
-                    ".activeSentence"
-                ); if (active) {
-                    active.scrollIntoView({behavior: "smooth", block: "center"});
-                }
+            renderSentences();
+            const active =
+                document.querySelector(".activeSentence");
+            if (active) {
+                active.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+            }
         }
+
+
+
+        /* =====================================================
+           RESTART CHAPTER
+        ===================================================== */
+
+        document.getElementById("restartButton").onclick = function () {
+            stopSpeech();
+            currentSentenceIndex = 0;
+            renderSentences();
+            updateProgress();
+        };
+
+
+
+
 
         /* =====================================================
            PROGRESS
@@ -860,42 +1045,39 @@ padding:10px;
            SPEED WINDOW
         ===================================================== */
 
-        document.getElementById(
-            "speedButton"
+        document.getElementById("speedButton").onclick = function () {
+            document.getElementById(
+                "speedOverlay"
+            )
+                .style.display = "block";
+        }; document.getElementById(
+            "closeSpeed"
         )
             .onclick = function () {
                 document.getElementById(
                     "speedOverlay"
                 )
-                    .style.display = "block";
-            }; document.getElementById(
-                "closeSpeed"
+                    .style.display = "none";
+            }; function updateSpeed() {
+                document.getElementById(
+                    "speedDisplay"
+                )
+                    .textContent = speed; document.getElementById(
+                        "speedButton"
+                    )
+                        .textContent =
+                        "⚡ "
+                        +
+                        speed
+                        +
+                        "x";
+            } document.getElementById(
+                "plusSpeed"
             )
                 .onclick = function () {
-                    document.getElementById(
-                        "speedOverlay"
-                    )
-                        .style.display = "none";
-                }; function updateSpeed() {
-                    document.getElementById(
-                        "speedDisplay"
-                    )
-                        .textContent = speed; document.getElementById(
-                            "speedButton"
-                        )
-                            .textContent =
-                            "⚡ "
-                            +
-                            speed
-                            +
-                            "x";
-                } document.getElementById(
-                    "plusSpeed"
-                )
-                    .onclick = function () {
-                        speed += 0.5;
-                        updateSpeed();
-                    };
+                    speed += 0.5;
+                    updateSpeed();
+                };
 
         document.getElementById("minusSpeed")
             .onclick = function () {
@@ -918,11 +1100,7 @@ padding:10px;
         ===================================================== */
 
         let fontSize = 22; function updateFont() {
-            document.getElementById(
-                "reader"
-            )
-                .style.fontSize =
-                fontSize + "px";
+            document.getElementById("reader").style.fontSize = fontSize + "px";
             localStorage.setItem(
                 "readerFont",
                 fontSize
@@ -950,7 +1128,7 @@ padding:10px;
             );
         if (savedFont) {
             fontSize =
-            Number(savedFont); updateFont();
+                Number(savedFont); updateFont();
         }
 
         /* =====================================================
@@ -958,67 +1136,58 @@ padding:10px;
         ===================================================== */
 
 
-        let darkMode = true; document.getElementById(
-            "themeButton"
-        )
-            .onclick = function () {
-                darkMode = !darkMode; if (darkMode) {
-                    document.body.style.background =
-                        "#121212";
-                    document.body.style.color =
-                        "white";
-                } else {
-                    document.body.style.background =
-                        "#eeeeee";
-                    document.body.style.color =
-                        "#111";
-                }
-            };
+        let darkMode = true; document.getElementById("themeButton").onclick = function () {
+            darkMode = !darkMode; if (darkMode) {
+                document.body.style.background =
+                    "#121212";
+                document.body.style.color =
+                    "white";
+            } else {
+                document.body.style.background =
+                    "#eeeeee";
+                document.body.style.color =
+                    "#111";
+            }
+        };
 
         /* =====================================================
            SPEED PRESETS
         ===================================================== */
 
-        document.querySelectorAll(
-            ".speedButtons button"
-        )
-            .forEach(btn => {
-                btn.onclick = function () {
-                    speed =
-                        parseFloat(
-                            this.textContent
-                        );
-                    updateSpeed();
-                };
-            });
+        document.querySelectorAll(".speedButtons button").forEach(btn => {
+            btn.onclick = function () {
+                speed =
+                    parseFloat(
+                        this.textContent
+                    );
+                updateSpeed();
+            };
+        });
 
         /* =====================================================
            LIBRARY
         ===================================================== */
 
-        document.getElementById(
-            "libraryButton"
-        )
-            .onclick = function () {
-                showLibrary();
+        document.getElementById("libraryButton").onclick = function () {
+            showLibrary();
+            document.getElementById(
+                "libraryOverlay"
+            )
+                .style.display =
+                "block";
+        }; window.addEventListener(
+            "load",
+            () => {
                 document.getElementById(
-                    "libraryOverlay"
+                    "closeLibrary"
                 )
-                    .style.display =
-                    "block";
-            }; window.addEventListener(
-                "load",
-                () => {
-                    document.getElementById(
-                        "closeLibrary"
-                    )
-                        .onclick = function () {
-                            document.getElementById(
-                                "libraryOverlay"
-                            )
-                                .style.display = "none";
-                        };
-                });
+                    .onclick = function () {
+                        document.getElementById(
+                            "libraryOverlay"
+                        )
+                            .style.display = "none";
+                    };
+            });
         function showLibrary() {
             let box =
                 document.getElementById(
@@ -1085,19 +1254,12 @@ ${library[book].date}
             "keydown",
             function (e) {
                 if (e.code === "Space") {
-                    e.preventDefault();
-                    document.getElementById(
-                        "playButton"
-                    )
-                        .click();
+                    e.preventDefault(); document.getElementById("playButton").click();
                 } if (e.key === "+") {
                     speed += 0.5; updateSpeed();
                 }
                 if (e.key === "-") {
-                    speed = Math.max(
-                        0.5,
-                        speed - 0.5
-                    );
+                    speed = Math.max(0.5, speed - 0.5);
                     updateSpeed();
                 } if (e.key === "ArrowRight") {
                     jumpSentence(5);
@@ -1243,6 +1405,75 @@ ${library[book].date}
                     test
                 );
             };
+
+        /* =====================================================
+MEDIA / BLUETOOTH / KEYBOARD PLAY-PAUSE
+===================================================== */
+
+        if ("mediaSession" in navigator) {
+            try {
+
+                navigator.mediaSession.setActionHandler("play", function () {
+                    const button =
+                        document.getElementById("playButton");
+                    if (!isPlaying) {
+                        button.click();
+                    }
+                }
+                );
+
+
+                navigator.mediaSession.setActionHandler(
+                    "pause",
+                    function () {
+
+                        const button =
+                            document.getElementById("playButton");
+
+                        if (isPlaying) {
+
+                            button.click();
+
+                        }
+
+                    }
+                );
+
+
+                navigator.mediaSession.setActionHandler(
+                    "nexttrack",
+                    function () {
+
+                        document
+                            .getElementById("nextChapterButton")
+                            .click();
+
+                    }
+                );
+
+
+                navigator.mediaSession.setActionHandler(
+                    "previoustrack",
+                    function () {
+
+                        document
+                            .getElementById("prevChapterButton")
+                            .click();
+
+                    }
+                );
+
+            }
+
+            catch (error) {
+
+                console.log(
+                    "Media Session not fully supported:",
+                    error
+                );
+
+            }
+        }
     </script>
 </body>
 
