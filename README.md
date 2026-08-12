@@ -1,5 +1,3 @@
-Absolutely. Since this is for your GitHub repository, I'd make the README feel more like a **real product landing page** than a basic technical README.
-
 # 📖 Novel Reader
 
 ### A modern, browser-based text-to-speech reader for novels, books, and long-form content.
