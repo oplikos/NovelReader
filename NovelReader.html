@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novel Reader</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family:
+                "Segoe UI",
+                Arial,
+                sans-serif;
+            background: #121212;
+            color: #eeeeee;
+            transition: .3s;
+        }
+
+        /* =========================
+   TOP BAR
+========================= */
+
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: #1e1e1e;
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            gap: 12px;
+            z-index: 1000;
+            box-shadow:
+                0 3px 10px rgba(0, 0, 0, .5);
+        }
+
+        button,
+        select {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        #bookTitle {
+            flex: 1;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* =========================
+   CONTENT
+========================= */
+
+        .container {
+            margin-top: 90px;
+            width: 90%;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 12px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            width: 0%;
+            background: #4caf50;
+        }
+
+        #reader {
+            margin-top: 20px;
+            background: #181818;
+            padding: 25px;
+            border-radius: 15px;
+            min-height: 500px;
+            font-size: 22px;
+            line-height: 1.8;
+            overflow-y: auto;
+        }
+
+        /* sentence highlight */
+        .activeSentence {
+            background: #665c00;
+            border-radius: 5px;
+        }
+
+        /* =========================
+DROP ZONE
+========================= */
+
+        #dropZone {
+            margin: 20px auto;
+            border: 2px dashed #777;
+            padding: 35px;
+            text-align: center;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+
+        #dropZone:hover {
+            background: #222;
+        }
+
+        /* =========================
+SPEED OVERLAY
+========================= */
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform:
+                translate(-50%, -50%);
+            background: #222;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow:
+                0 10px 40px black;
+            z-index: 2000;
+            width: 300px;
+            text-align: center;
+        }
+
+        .overlay h2 {
+            margin-top: 0;
+        }
+
+        .speedValue {
+            font-size: 35px;
+            margin: 20px;
+        }
+
+        .speedButtons button {
+            margin: 5px;
+        }
+
+        /* =========================
+INFO BOX
+========================= */
+
+        .infoBox {
+            display: none;
+            position: absolute;
+            right: 20px;
+            top: 65px;
+            background: #222;
+            padding: 20px;
+            width: 300px;
+            border-radius: 12px;
+            box-shadow:
+                0 10px 30px black;
+        }
+
+        /* mobile */
+        @media(max-width:700px) {
+            .topbar {
+                flex-wrap: wrap;
+                height: auto;
+            }
+
+            #bookTitle {
+                order: 5;
+                width: 100%;
+            }
+
+            .container {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =========================
+TOP CONTROLS
+========================= -->
+
+    <div class="topbar">
+        <button id="playButton">
+            ▶
+        </button>
+        <button id="prevChapterButton">
+            ⏮
+        </button>
+        <button id="restartButton">
+             ⌂
+        </button>
+        <button id="nextChapterButton">
+            ⏭
+        </button><select id="chapterSelect">
+            <option>
+                Chapter
+            </option>
+        </select>
+        <button id="speedButton">⚡ 1x</button>
+        <input id="jumpInput" type="number" value="100" min="-10000" max="10000" step="10" placeholder="Jump words"
+            style="
+width:100px;
+padding:8px;
+border-radius:8px;
+">
+        <button id="jumpButton">
+            ↔
+        </button>
+        <select id="voiceSelect">
+            <option>
+                Loading voices...
+            </option>
+        </select>
+        <button id="testVoice">
+            🔊 Test
+        </button>
+        <button id="fontMinus">
+            A-
+        </button>
+        <button id="fontPlus">
+            A+
+        </button>
+        <button id="themeButton">
+            🌙
+        </button>
+        <button id="libraryButton">
+            📚
+        </button>
+        <button id="searchButton">
+            🔍
+        </button>
+        <button id="infoButton">ⓘ
+        </button>
+        <div id="bookTitle">No Book Loaded</div><input type="file" id="fileInput" accept=".txt,.pdf" hidden>
+        <button onclick="
+document.getElementById('fileInput').click()
+">📂</button>
+    </div>
+    <!-- INFO WINDOW -->
+    <div id="infoOverlay" class="overlay">
+        <h2>ⓘ Novel Reader</h2>
+        <div style="text-align:left;line-height:1.7">
+            <h3>Keyboard Shortcuts</h3>
+            <b>Space</b> - Play / Pause<br>
+            <b>← →</b> - Jump 5 sentences<br>
+            <b>B / N</b> - Jump 50 sentences<br>
+            <b>+ / -</b> - Speed<br>
+            <b>Esc</b> - Close windows<br>
+            <hr>
+            <div id="viewModeContainer" style="display:none">
+                <h3>Navigation Mode</h3>
+                <label>
+                    <input type="radio" name="viewMode" value="chapter" checked>
+                    Chapters
+                </label>
+                <br>
+                <label>
+                    <input type="radio" name="viewMode" value="page">
+                    Pages
+                </label>
+            </div>
+            <hr>
+            <small>
+                Made by<br>
+                <b>Sarkis Bozikian</b><br>
+                https://github.com/oplikos
+                oplikos@yahoo.com
+            </small>
+        </div>
+        <br>
+        <button id="closeInfo">Close</button>
+    </div>
+
+    <!-- =========================
+SPEED WINDOW
+========================= -->
+
+    <div id="speedOverlay" class="overlay">
+        <h2>
+            Reading Speed
+        </h2>
+        <div class="speedValue"><span id="speedDisplay">
+                1
+            </span>x</div><button id="minusSpeed">
+            −
+        </button>
+        <button id="plusSpeed">
+            +
+        </button>
+        <hr>
+        <div class="speedButtons">
+            <button>
+                1x
+            </button>
+            <button>
+                1.5x
+            </button>
+            <button>
+                2x
+            </button>
+            <button>
+                3x
+            </button>
+            <button>
+                4x
+            </button>
+        </div><br>
+        <button id="closeSpeed">Close</button>
+    </div>
+    <div class="container">
+        <div class="info-panel">
+            <div>Chapter:<span id="currentChapter">N/A</span>
+            </div>
+            <div>Words:<span id="wordCount">0</span>
+            </div>
+        </div>
+        <div class="progress-container">
+            <div id="progress" class="progress"></div>
+        </div>
+        <div id="dropZone">
+            Drop TXT file here
+        </div>
+        <div id="reader">
+            Load a novel to begin...
+        </div>
+    </div>
+    <!-- SEARCH WINDOW -->
+    <div id="searchOverlay" class="overlay">
+        <h2>
+            Search
+        </h2>
+        <input id="searchInput" placeholder="Find word..." style="
+width:90%;
+padding:10px;
+">
+        <br><br>
+        <button id="closeSearch">
+            Close
+        </button>
+    </div><!-- LIBRARY WINDOW -->
+    <div id="libraryOverlay" class="overlay">
+
+        <h2>📚 Library</h2>
+
+        <div id="libraryList"></div>
+
+        <button id="closeLibrary">Close</button>
+
+    </div>
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.54/pdf.min.mjs"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <script>
+
+        /* =====================================================
+           GLOBAL READER DATA
+        ===================================================== */
+
+        let currentBook = "";
+        let fullText = "";
+        let chapters = [];
+        let currentChapterIndex = 0;
+        let sentences = [];
+        let currentSentenceIndex = 0;
+        let speed = 1;
+        let isPlaying = false;
+        let currentUtterance = null;
+        if (typeof pdfjsLib !== "undefined") {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        }
+
+        /* =====================================================
+           SAVE SYSTEM
+        ===================================================== */
+
+        let library = {}; function loadLibrary() {
+            let saved =
+                localStorage.getItem(
+                    "novelReaderLibrary"
+                );
+            if (saved) {
+                library =
+                JSON.parse(saved);
+            }
+        } function saveLibrary() {
+            localStorage.setItem(
+                "novelReaderLibrary",
+                JSON.stringify(library)
+            );
+        }
+        function saveProgress() {
+            if (!currentBook)
+                return; library[currentBook] = {
+                    chapter:
+                        currentChapterIndex,
+                    sentence:
+                        currentSentenceIndex,
+                    speed:
+                        speed,
+                    date:
+                        new Date().toLocaleString()
+                }; saveLibrary();
+        } function checkResume() {
+            if (
+                !library[currentBook]
+            )
+                return; let saved =
+                    library[currentBook]; let resume =
+                        confirm("Resume " + currentBook +
+                            "\n\n" +
+                            "Chapter: "
+                            +
+                            (saved.chapter + 1)
+                            +
+                            "\nSentence: "
+                            +
+                            (saved.sentence + 1)); if (resume) {
+                                speed =
+                                    saved.speed || 1;
+                                updateSpeed();
+                                loadChapter(
+                                    saved.chapter
+                                );
+                                currentSentenceIndex =
+                                    saved.sentence; renderSentences();
+                                updateProgress();
+                            }
+        }
+
+        /* =====================================================
+           FILE LOADING TXT + PDF
+        ===================================================== */
+        document.getElementById("fileInput").onchange = async function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            currentBook = file.name;
+            document.getElementById("bookTitle").textContent = file.name;
+            if (file.name.toLowerCase().endsWith(".txt")) {
+                const reader = new FileReader();
+                reader.onload = function () {
+                    fullText = this.result;
+                    parseChapters();
+                    loadChapter(0);
+                    setTimeout(checkResume, 300);
+                };
+                reader.readAsText(file);
+            }
+            else if (file.name.toLowerCase().endsWith(".pdf")) {
+                try {
+                    if (typeof pdfjsLib === "undefined") {
+                        alert("PDF engine failed loading");
+                        return;
+                    }
+                    await loadPDF(file);
+                }
+                catch (error) {
+                    console.error(error);
+                    alert("Could not read this PDF file.");
+                }
+            }
+        };
+
+
+        /* =====================================================
+           FILE LOADING PDF
+        ===================================================== */
+        async function loadPDF(file) {
+            dropZone.textContent = "Loading PDF...";
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({
+                data: buffer
+            }).promise;
+            let text = "";
+            for (let page = 1; page <= pdf.numPages; page++) {
+                dropZone.textContent =
+                    "Reading PDF page "
+                    + page +
+                    " / "
+                    + pdf.numPages;
+                const p = await pdf.getPage(page);
+                const content = await p.getTextContent();
+                text += content.items
+                    .map(item => item.str)
+                    .join(" ");
+                text += "\n\n";
+            }
+            fullText = text;
+            dropZone.textContent = "PDF Loaded";
+            parseChapters();
+            loadChapter(0);
+            setTimeout(checkResume, 300);
+        }
+        /* =====================================================
+           CHAPTER PARSER
+        ===================================================== */
+
+        function parseChapters() {
+            let regex =
+                /(?:^|\n)\s*(chapter\s*[:\-]?\s*[0-9]+|chapter\s+[a-zA-Z]+)\s*/gi; let matches = [
+                    ...fullText.matchAll(regex)
+                ]; chapters = []; if (matches.length === 0) {
+                    chapters.push({title: "Beginning", text: fullText});
+                } else {
+                for (let i = 0; i < matches.length; i++) {
+                    let start =
+                        matches[i].index;
+                    let end =
+                        i + 1 < matches.length
+                            ?
+                            matches[i + 1].index
+                            :
+                            fullText.length; chapters.push({
+                                title:
+                                    matches[i][0].trim(), text:
+                                    fullText.substring(
+                                        start,
+                                        end
+                                    )
+                            });
+                }
+            } populateChapterMenu();
+        }
+
+        /* =====================================================
+           CHAPTER DROPDOWN
+        ===================================================== */
+
+        function populateChapterMenu() {
+            let select =
+                document.getElementById(
+                    "chapterSelect"
+                ); select.innerHTML = ""; chapters.forEach(
+                    (chapter, index) => {
+                        let option =
+                            document.createElement(
+                                "option"
+                            );
+                        option.value = index;
+                        option.textContent =
+                            chapter.title; select.appendChild(option);
+                    });
+        }
+        document.getElementById(
+            "chapterSelect"
+        )
+            .onchange = function () {
+                stopSpeech();
+                loadChapter(
+                    Number(this.value)
+                );
+            };
+
+        /* =====================================================
+           LOAD CHAPTER
+        ===================================================== */
+
+        function loadChapter(index) {
+            if (!chapters[index])
+                return; currentChapterIndex = index;
+            document.getElementById(
+                "chapterSelect"
+            )
+                .value = index; document.getElementById(
+                    "currentChapter"
+                )
+                    .textContent =
+                    chapters[index].title;
+            sentences =
+                splitSentences(
+                    chapters[index].text
+                ); currentSentenceIndex = 0; renderSentences(); updateProgress(); saveProgress();
+        }
+
+        /* =====================================================
+           SENTENCE SPLITTER
+        ===================================================== */
+
+        function splitSentences(text) {
+            return text.replace(/\s+/g, " ").match(
+                /[^.!?]+[.!?]+|[^.!?]+$/g
+            ) || [];
+        }
+
+        /* =====================================================
+           DISPLAY SENTENCES
+        ===================================================== */
+
+        function renderSentences() {
+            let box =
+                document.getElementById(
+                    "reader"
+                );
+            box.innerHTML = "";
+            sentences.forEach(
+                (sentence, index) => {
+                    let span =
+                        document.createElement(
+                            "span"
+                        );
+                    span.textContent =
+                        sentence + " ";
+                    span.dataset.index = index; span.onclick = function () {
+                        stopSpeech();
+                        currentSentenceIndex = index;
+                        renderSentences();
+                        updateProgress();
+                    };
+                    if (index === currentSentenceIndex) {
+                        span.classList.add(
+                            "activeSentence"
+                        );
+                    } box.appendChild(span);
+                });
+        }
+
+        /* =====================================================
+           SPEECH ENGINE
+        ===================================================== */
+
+        function speakCurrentSentence() {
+            if (!isPlaying || isPaused)
+                return;
+            if (currentSentenceIndex >= sentences.length) {
+                nextChapter();
+                return;
+            }
+            let text = sentences[currentSentenceIndex];
+
+            currentUtterance =
+                new SpeechSynthesisUtterance(text);
+            if (selectedVoice) {
+                currentUtterance.voice =
+                selectedVoice;
+            }
+            currentUtterance.rate =
+                speed; currentUtterance.onstart = function () {
+                    highlightCurrent();
+                };
+            currentUtterance.onend = function () {
+                if (!isPlaying || isPaused)
+                    return;
+                currentSentenceIndex++;
+                updateProgress();
+                renderSentences();
+                setTimeout(() => {
+                    if (isPlaying && !isPaused) {
+                        speakCurrentSentence();
+                    }
+                }, 100);
+            };
+            speechSynthesis.speak(currentUtterance);
+        }
+
+        /* =====================================================
+        CHAPTER NAVIGATION
+        ===================================================== */
+
+        document.getElementById(
+            "nextChapterButton"
+        )
+            .onclick = function () {
+                stopSpeech();
+                if (currentChapterIndex < chapters.length - 1) {
+                    loadChapter(currentChapterIndex + 1);
+                }
+            };
+        document.getElementById("prevChapterButton")
+            .onclick = function () {
+                stopSpeech(); if (currentChapterIndex > 0) {
+                    loadChapter(currentChapterIndex - 1);
+                }
+            };
+
+        /* =====================================================
+        WORD JUMP
+        ===================================================== */
+
+        document.getElementById(
+            "jumpButton"
+        )
+            .onclick = function () {
+                let amount =
+                    parseInt(document.getElementById("jumpInput").value);
+                if (!amount)
+                    return;
+                let wordsMoved = 0;
+                let direction = amount > 0 ? 1 : -1; amount = Math.abs(amount);
+                while (wordsMoved < amount) {
+                    currentSentenceIndex += direction;
+                    if (
+                        currentSentenceIndex < 0
+                    ) {
+                        currentSentenceIndex = 0;
+                        break;
+                    } if (currentSentenceIndex >= sentences.length) {
+                        currentSentenceIndex =
+                            sentences.length - 1; break;
+                    }
+                    wordsMoved += sentences[currentSentenceIndex]
+                        .split(/\s+/)
+                        .length;
+                }
+                renderSentences();
+                updateProgress();
+            };
+
+        /* =====================================================
+           PLAY / PAUSE / RESUME
+        ===================================================== */
+
+        let isPaused = false;
+
+        document.getElementById("playButton").onclick = function () {
+            /* =========================
+               PAUSED → RESUME
+            ========================= */
+            if (isPaused) {
+                speechSynthesis.resume();
+                isPaused = false;
+                isPlaying = true;
+                this.textContent = "⏸";
+                updateProgress();
+                return;
+            }
+            /* =========================
+               PLAY / START
+            ========================= */
+            if (!isPlaying) {
+                isPlaying = true;
+                isPaused = false;
+                this.textContent = "⏸";
+                speakCurrentSentence();
+                updateProgress();
+                return;
+            }
+            /* =========================
+               PLAYING → PAUSE
+            ========================= */
+            if (isPlaying) {
+                speechSynthesis.pause();
+                isPaused = true;
+                isPlaying = false;
+                this.textContent = "▶";
+                saveProgress();
+                updateProgress();
+            }
+        };
+
+        /* =====================================================
+           RESTART CHAPTER
+        ===================================================== */
+
+        document.getElementById(
+            "restartButton"
+        )
+            .onclick = function () {
+                stopSpeech();
+                currentSentenceIndex = 0;
+                renderSentences();
+                updateProgress();
+            };
+
+        function stopSpeech() {
+            speechSynthesis.cancel();
+            isPlaying = false;
+            isPaused = false;
+            currentUtterance = null;
+            document.getElementById("playButton").textContent = "▶";
+        }
+
+        /* =====================================================
+           NEXT CHAPTER
+        ===================================================== */
+
+        function nextChapter() {
+            if (
+                currentChapterIndex
+                <
+                chapters.length - 1
+            ) {
+                loadChapter(
+                    currentChapterIndex + 1
+                ); if (isPlaying) speakCurrentSentence();
+            } else {
+                stopSpeech();
+            }
+        }
+
+        /* =====================================================
+           HIGHLIGHT
+        ===================================================== */
+
+        function highlightCurrent() {
+            renderSentences(); let active =
+                document.querySelector(
+                    ".activeSentence"
+                ); if (active) {
+                    active.scrollIntoView({behavior: "smooth", block: "center"});
+                }
+        }
+
+        /* =====================================================
+           PROGRESS
+        ===================================================== */
+
+        function updateProgress() {
+            let percent =
+                (
+                    currentSentenceIndex
+                    /
+                    sentences.length
+                )
+                * 100; document.getElementById(
+                    "progress"
+                )
+                    .style.width =
+                    percent + "%"; document.getElementById(
+                        "wordCount"
+                    )
+                        .textContent =
+                        (currentSentenceIndex + 1)
+                        +
+                        " / "
+                        +
+                        sentences.length;
+        }
+
+        /* =====================================================
+           SPEED WINDOW
+        ===================================================== */
+
+        document.getElementById(
+            "speedButton"
+        )
+            .onclick = function () {
+                document.getElementById(
+                    "speedOverlay"
+                )
+                    .style.display = "block";
+            }; document.getElementById(
+                "closeSpeed"
+            )
+                .onclick = function () {
+                    document.getElementById(
+                        "speedOverlay"
+                    )
+                        .style.display = "none";
+                }; function updateSpeed() {
+                    document.getElementById(
+                        "speedDisplay"
+                    )
+                        .textContent = speed; document.getElementById(
+                            "speedButton"
+                        )
+                            .textContent =
+                            "⚡ "
+                            +
+                            speed
+                            +
+                            "x";
+                } document.getElementById(
+                    "plusSpeed"
+                )
+                    .onclick = function () {
+                        speed += 0.5;
+                        updateSpeed();
+                    };
+
+        document.getElementById("minusSpeed")
+            .onclick = function () {
+                speed = Math.max(0.5, speed - 0.5);
+                updateSpeed();
+            };
+
+        setInterval(() => {
+            if (isPlaying) {
+                saveProgress();
+            }
+        }, 5000);
+
+        window.addEventListener("beforeunload", () => {
+            saveProgress();
+        });
+
+        /* =====================================================
+           FONT SIZE SYSTEM
+        ===================================================== */
+
+        let fontSize = 22; function updateFont() {
+            document.getElementById(
+                "reader"
+            )
+                .style.fontSize =
+                fontSize + "px";
+            localStorage.setItem(
+                "readerFont",
+                fontSize
+            );
+        } document.getElementById(
+            "fontPlus"
+        )
+            .onclick = function () {
+                fontSize += 2;
+                updateFont();
+            };
+        document.getElementById(
+            "fontMinus"
+        )
+            .onclick = function () {
+                fontSize = Math.max(
+                    12,
+                    fontSize - 2
+                );
+                updateFont();
+            };
+        let savedFont =
+            localStorage.getItem(
+                "readerFont"
+            );
+        if (savedFont) {
+            fontSize =
+            Number(savedFont); updateFont();
+        }
+
+        /* =====================================================
+           DARK / LIGHT MODE
+        ===================================================== */
+
+
+        let darkMode = true; document.getElementById(
+            "themeButton"
+        )
+            .onclick = function () {
+                darkMode = !darkMode; if (darkMode) {
+                    document.body.style.background =
+                        "#121212";
+                    document.body.style.color =
+                        "white";
+                } else {
+                    document.body.style.background =
+                        "#eeeeee";
+                    document.body.style.color =
+                        "#111";
+                }
+            };
+
+        /* =====================================================
+           SPEED PRESETS
+        ===================================================== */
+
+        document.querySelectorAll(
+            ".speedButtons button"
+        )
+            .forEach(btn => {
+                btn.onclick = function () {
+                    speed =
+                        parseFloat(
+                            this.textContent
+                        );
+                    updateSpeed();
+                };
+            });
+
+        /* =====================================================
+           LIBRARY
+        ===================================================== */
+
+        document.getElementById(
+            "libraryButton"
+        )
+            .onclick = function () {
+                showLibrary();
+                document.getElementById(
+                    "libraryOverlay"
+                )
+                    .style.display =
+                    "block";
+            }; window.addEventListener(
+                "load",
+                () => {
+                    document.getElementById(
+                        "closeLibrary"
+                    )
+                        .onclick = function () {
+                            document.getElementById(
+                                "libraryOverlay"
+                            )
+                                .style.display = "none";
+                        };
+                });
+        function showLibrary() {
+            let box =
+                document.getElementById(
+                    "libraryList"
+                ); box.innerHTML = ""; Object.keys(library)
+                    .forEach(book => {
+                        let item =
+                            document.createElement(
+                                "div"
+                            ); item.style.padding =
+                                "10px"; item.style.cursor =
+                                    "pointer"; item.innerHTML =
+                                        `
+<b>${book}</b>
+<br>
+${library[book].date}
+<br><br>
+`; item.onclick = function () {
+                            alert(
+                                "Open this file from your computer:"
+                                +
+                                book
+                            );
+                        }; box.appendChild(item);
+                    });
+        }
+
+        /* =====================================================
+           SEARCH
+        ===================================================== */
+
+        document.getElementById(
+            "searchButton"
+        )
+            .onclick = function () {
+                document.getElementById(
+                    "searchOverlay"
+                )
+                    .style.display =
+                    "block";
+            };
+        document.getElementById(
+            "closeSearch"
+        )
+            .onclick = function () {
+                document.getElementById(
+                    "searchOverlay"
+                )
+                    .style.display =
+                    "none";
+            };
+
+        /* =====================================================
+           KEYBOARD SHORTCUTS
+        ===================================================== */
+        document.getElementById("infoButton").onclick = function () {
+            document.getElementById("infoOverlay").style.display = "block";
+        };
+
+        document.getElementById("closeInfo").onclick = function () {
+            document.getElementById("infoOverlay").style.display = "none";
+        };
+        document.addEventListener(
+            "keydown",
+            function (e) {
+                if (e.code === "Space") {
+                    e.preventDefault();
+                    document.getElementById(
+                        "playButton"
+                    )
+                        .click();
+                } if (e.key === "+") {
+                    speed += 0.5; updateSpeed();
+                }
+                if (e.key === "-") {
+                    speed = Math.max(
+                        0.5,
+                        speed - 0.5
+                    );
+                    updateSpeed();
+                } if (e.key === "ArrowRight") {
+                    jumpSentence(5);
+                } if (e.key === "ArrowLeft") {
+                    jumpSentence(-5);
+                } if (e.key === "b") {
+                    jumpSentence(-50);
+                } if (e.key === "n") {
+                    jumpSentence(50);
+                } if (e.key === "Escape") {
+                    document.querySelectorAll(
+                        ".overlay"
+                    )
+                        .forEach(x =>
+                            x.style.display = "none"
+                        );
+                }
+            });
+        function jumpSentence(amount) {
+            stopSpeech();
+            currentSentenceIndex += amount;
+            if (currentSentenceIndex < 0) currentSentenceIndex = 0;
+            if (
+                currentSentenceIndex >= sentences.length
+            ) currentSentenceIndex =
+                sentences.length - 1;
+            renderSentences();
+            updateProgress();
+        }
+
+        /* =====================================================
+           LOAD LIBRARY AT START
+        ===================================================== */
+
+        loadLibrary();
+
+        /* =====================================================
+           VOICE SYSTEM
+        ===================================================== */
+
+        let voices = [];
+
+        let selectedVoice = null;
+        function loadVoices() {
+            voices = speechSynthesis.getVoices(); let select =
+                document.getElementById(
+                    "voiceSelect"
+                ); if (!select)
+                return;
+            select.innerHTML = "";
+            if (voices.length === 0) {
+                let option =
+                    document.createElement("option"); option.textContent =
+                        "Loading voices..."; select.appendChild(option); return;
+
+            }
+            voices.forEach((voice, index) => {
+                let option =
+                    document.createElement("option"); option.value = index; option.textContent =
+                        voice.name +
+                        " (" +
+                        voice.lang +
+                        ")"; select.appendChild(option);
+            });
+            // Default voice
+            selectedVoice = voices[0];
+            console.log(
+                "Loaded voices:",
+                voices
+            );
+        }
+
+        // Chrome / Edge load voices asynchronously
+
+        speechSynthesis.onvoiceschanged =
+            function () {
+
+                loadVoices();
+
+            };
+
+        // Initial load attempt
+
+        window.addEventListener(
+            "load",
+            () => {
+                loadVoices();
+
+                // retry because Chrome sometimes returns empty first time
+
+                setTimeout(
+                    loadVoices,
+                    500
+                ); setTimeout(
+                    loadVoices,
+                    1500
+                );
+            });
+
+        /* =====================================================
+           SELECT VOICE
+        ===================================================== */
+
+        document.getElementById(
+            "voiceSelect"
+        )
+            .onchange = function () {
+                let index =
+                    this.value;
+                selectedVoice =
+                    voices[index]; console.log(
+                        "Selected:",
+                        selectedVoice
+                    ); saveProgress();
+            };
+        /* =====================================================
+           TEST VOICE
+        ===================================================== */
+
+        document.getElementById(
+            "testVoice"
+        )
+            .onclick = function () {
+                if (!selectedVoice) {
+
+                    alert(
+                        "No voice selected"
+                    );
+
+                    return;
+
+                }
+                speechSynthesis.cancel();
+                let test =
+                    new SpeechSynthesisUtterance(
+                        "This is a voice test for your novel reader."
+                    );
+                test.voice =
+                    selectedVoice;
+                test.rate =
+                    speed;
+                speechSynthesis.speak(
+                    test
+                );
+            };
+    </script>
+</body>
+
+</html>
