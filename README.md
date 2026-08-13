@@ -1,4 +1,4 @@
-# 📖 Novel Reader
+# 📖 Novel Reader https://oplikos.github.io/NovelReader/
 
 ### A modern, browser-based text-to-speech reader for novels, books, and long-form content.
 
